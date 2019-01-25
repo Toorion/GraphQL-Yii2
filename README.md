@@ -1,8 +1,4 @@
-# graphql-php
-[![Build Status](https://travis-ci.org/webonyx/graphql-php.svg?branch=master)](https://travis-ci.org/webonyx/graphql-php)
-[![Code Coverage](https://scrutinizer-ci.com/g/webonyx/graphql-php/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/webonyx/graphql-php)
-[![Latest Stable Version](https://poser.pugx.org/webonyx/graphql-php/version)](https://packagist.org/packages/webonyx/graphql-php)
-[![License](https://poser.pugx.org/webonyx/graphql-php/license)](https://packagist.org/packages/webonyx/graphql-php)
+# graphql-yii2
 
 This is a PHP implementation of the GraphQL [specification](https://github.com/facebook/graphql)
 based on the [reference implementation in JavaScript](https://github.com/graphql/graphql-js).
@@ -10,12 +6,8 @@ based on the [reference implementation in JavaScript](https://github.com/graphql
 ## Installation
 Via composer:
 ```
-composer require webonyx/graphql-php
+composer require toorion/graphql-yii2
 ```
-
-## Documentation
-Full documentation is available on the [Documentation site](http://webonyx.github.io/graphql-php/) as well 
-as in the [docs](docs/) folder of the distribution.
 
 If you don't know what GraphQL is, visit this [official website](http://graphql.org) 
 by the Facebook engineering team.
@@ -23,9 +15,6 @@ by the Facebook engineering team.
 ## Examples
 There are several ready examples in the [examples](examples/) folder of the distribution with specific 
 README file per example.
-
-## Contribute
-Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute.
 
 ## Old README.md
 Here is a [link to the old README.md](https://github.com/webonyx/graphql-php/blob/v0.9.14/README.md). 
