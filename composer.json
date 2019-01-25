@@ -1,9 +1,9 @@
 {
-  "name":              "webonyx/graphql-php",
+  "name":              "toorion/graphql-yii2",
   "description":       "A PHP port of GraphQL reference implementation",
   "type":              "library",
   "license":           "MIT",
-  "homepage":          "https://github.com/webonyx/graphql-php",
+  "homepage":          "https://github.com/toorion/graphql-yii2",
   "keywords":          [
     "graphql",
     "API"
