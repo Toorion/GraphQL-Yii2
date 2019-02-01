@@ -515,6 +515,10 @@ class ReferenceExecutor implements ExecutorImplementation
         $fieldNode  = $fieldNodes[0];
         $fieldName  = $fieldNode->name->value;
 
+        if('__schema' == $fieldName) {
+            return $exeContext->queryModel->getDocumentation();
+        }
+
         $args = [];
         if($parentModel instanceof QueryModel) {
             $objectInfo = $exeContext->queryModel->discoverObjectInfo($fieldName);
@@ -613,38 +617,6 @@ class ReferenceExecutor implements ExecutorImplementation
     }
 
 
-
-
-
-    /**
-     * This method looks up the field on the given type definition.
-     * It has special casing for the two introspection fields, __schema
-     * and __typename. __typename is special because it can always be
-     * queried as a field, even in situations where no other fields
-     * are allowed, like on a Union. __schema could get automatically
-     * added to the query type, but that would require mutating type
-     * definitions, which would cause issues.
-     *
-     * @param string $fieldName
-     *
-     * @return FieldDefinition
-     */
-    private function getFieldDef(Schema $schema, ObjectType $parentType, $fieldName)
-    {
-        static $schemaMetaFieldDef, $typeMetaFieldDef, $typeNameMetaFieldDef;
-        $schemaMetaFieldDef   = $schemaMetaFieldDef ?: Introspection::schemaMetaFieldDef();
-        $typeMetaFieldDef     = $typeMetaFieldDef ?: Introspection::typeMetaFieldDef();
-        $typeNameMetaFieldDef = $typeNameMetaFieldDef ?: Introspection::typeNameMetaFieldDef();
-        if ($fieldName === $schemaMetaFieldDef->name && $schema->getQueryType() === $parentType) {
-            return $schemaMetaFieldDef;
-        } elseif ($fieldName === $typeMetaFieldDef->name && $schema->getQueryType() === $parentType) {
-            return $typeMetaFieldDef;
-        } elseif ($fieldName === $typeNameMetaFieldDef->name) {
-            return $typeNameMetaFieldDef;
-        }
-        $tmp = $parentType->getFields();
-        return $tmp[$fieldName] ?? null;
-    }
 
     /**
      * Isolates the "ReturnOrAbrupt" behavior to not de-opt the `resolveField`
