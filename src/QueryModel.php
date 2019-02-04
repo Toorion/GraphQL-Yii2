@@ -474,7 +474,7 @@ class QueryModel extends Model
         }
 
         $relations = $this->getRelationsOf($model->tableSchema->schemaName, $model->tableSchema->name);
-static $done = 0;
+
         foreach($relations as $relation) {
 
             /*
@@ -506,7 +506,6 @@ static $done = 0;
                 }
             }
 
-if($done>9) break;
             /*
              * Pluralize relations
              */
@@ -538,7 +537,6 @@ if($done>9) break;
                             "isDeprecated" => false,
                             "deprecationReason" => null
                         ];
-                        $done++;
                     }
                 }
             }
