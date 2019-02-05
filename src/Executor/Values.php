@@ -48,14 +48,12 @@ class Values
      */
     public static function getVariableValues($varDefNodes, array $inputs)
     {
-        return [null, []];
-
         $errors        = [];
         $coercedValues = [];
         foreach ($varDefNodes as $varDefNode) {
             $varName = $varDefNode->variable->name->value;
-            /** @var InputType|Type $varType */
-            $varType = TypeInfo::typeFromAST($schema, $varDefNode->type);
+
+            $varType = Type::getStandardTypes()[$varDefNode->type->name->value];
 
             if (Type::isInputType($varType)) {
                 if (array_key_exists($varName, $inputs)) {
