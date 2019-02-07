@@ -579,36 +579,41 @@ class ReferenceExecutor implements ExecutorImplementation
     {
         $relations = $this->exeContext->queryModel->getRelationsOf($parentModel->tableSchema->schemaName, $parentModel->tableSchema->name);
 
+        $multiple = false;
         $relation = null;
-        if(isset($relations[$fieldName])) {
-            $relation = $relations[$fieldName];
-        } else {
-            $key = Inflector::singularize($fieldName);
-            if(isset($relations[$key])) {
-                $relation = $relations[$key];
-            }
+        $key = strtolower($fieldName);
+        if($fieldName == Inflector::singularize($fieldName)) {
+            // hasOne
+        } elseif($fieldName == Inflector::pluralize($fieldName)) {
+            // hasMany
+            $multiple = true;
+            $key = Inflector::singularize($key);
         }
 
-        if(null !== $relation) {
-            $relationName = $relation['name'];
+        if(isset($relations[$key])) {
+            $relation = $relations[$key];
+
             if(isset($relation['class'])) {
                 $modelClass = $relation['class'];
-                $multiple = $relation['multiple'];
             } else {
-                $methodName = 'get' . $relationName;
+                $methodName = 'get' . $fieldName;
                 if (!method_exists($parentModel, $methodName)) {
-                    $relationName = Inflector::pluralize($relationName);
-                    $methodName = 'get' . $relationName;
-                    if (!method_exists($parentModel, $methodName)) {
-                        return null; // todo: throw an Exception
-                    }
+                    throw new Error(
+                        "Method $methodName of $parentModel not exist"
+                    );
                 }
                 $query = $parentModel->$methodName();
                 if(!$query instanceof Query) {
-                    return null; // todo: throw an Exception
+                    throw new Error(
+                        "Method $methodName of $parentModel not a Query"
+                    );
                 }
                 $modelClass = $query->modelClass;
-                $multiple = $query->multiple;
+                if($multiple != $query->multiple) {
+                    throw new Error(
+                        "Method $methodName of $parentModel not a same multiple type"
+                    );
+                }
             }
             return $this->exeContext->queryModel->getObjectType($modelClass, $multiple);
         }
