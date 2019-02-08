@@ -57,7 +57,8 @@ class QueryModel extends Model
 
                 foreach ($foreignKeys as $row) {
                     if($row['table_schema'] == $tableSchema && $row['table_name'] == $tableName) {
-                        $name = $row['foreign_table_name'];
+                        //$name = $row['foreign_table_name'];
+                        $name = str_replace('_id', '', $row['column_name']);
                     } else {
                         $name = $row['table_name'];
                     }
@@ -176,10 +177,10 @@ class QueryModel extends Model
     public function discoverObjectInfo($name)
     {
         $name = str_replace('_', '.', $name);
-//
-//        $name = mb_strtolower(
-//            preg_replace( '/([a-z0-9])([A-Z])/', "$1_$2", $name )
-//        );
+
+        $name = mb_strtolower(
+            preg_replace( '/([a-z0-9])([A-Z])/', "$1_$2", $name )
+        );
 
         $multiple = ($name == Inflector::pluralize($name));
         $alias = $multiple ? Inflector::singularize($name) : $name;
@@ -191,54 +192,9 @@ class QueryModel extends Model
         }
 
         return new Info($this, $this->queryClasses[$alias], $multiple);
-
-        return [
-            'type' => $this->getObjectType($this->queryClasses[$alias]['class'], $multiple),
-            'resolve' => $this->getResolveFn($alias, $multiple),
-            'args' => $this->getArgs($alias, $multiple),
-        ];
     }
 
 
-
-
-    public function getResolveFn($typeName, $multiple = false)
-    {
-        $className = $this->queryClasses[$typeName]['class'];
-
-        if($multiple) {
-            if(isset($this->queryClasses[$typeName]['resolve']) && is_callable($this->queryClasses[$typeName]['resolve'])) {
-                return $this->queryClasses[$typeName]['resolve'];
-            }
-
-            return function ($root, $args) use ($className) {
-                /** @var Query $query */
-                $query = call_user_func($className . '::find');
-                if (isset($args['limit'])) {
-                    $query->limit($args['limit']);
-                }
-                if (isset($args['offset'])) {
-                    $query->offset($args['offset']);
-                }
-                if (isset($args['sort'])) {
-                    $query->orderBy($args['sort']);
-                }
-                if (isset($args['filter'])) {
-                    $query->andWhere($args['filter']);
-                }
-
-                return $query->all();
-            };
-        } else {
-            if(isset($this->queryClasses[$typeName]['resolveOne']) && is_callable($this->queryClasses[$typeName]['resolveOne'])) {
-                return $this->queryClasses[$typeName]['resolveOne'];
-            }
-
-            return function ($root, $args) use ($className) {
-                return call_user_func($className . '::findOne', $args['id']);
-            };
-        }
-    }
 
 
     public function getDocumentation()
@@ -289,6 +245,7 @@ class QueryModel extends Model
         foreach($this->queryClasses as $name => $row) {
             $name = str_replace('.', '_', $this->getTableAlias($name));
 
+            // Singular
             $queryFields[] = [
                 "name" => $name,
                 "description" => $row['description'] ?? null,
@@ -317,6 +274,36 @@ class QueryModel extends Model
                 "deprecationReason" => null
             ];
 
+            // Plural
+            $queryFields[] = [
+                "name" => Inflector::pluralize($name),
+                "description" => $row['description'] ?? null,
+                "args" => [
+                    [
+                        "name" => "id",
+                        "description" => null,
+                        "type" => [
+                            "kind" => "NON_NULL",
+                            "name" => null,
+                            "ofType" => [
+                                "kind" => "SCALAR",
+                                "name" => "Int",
+                                "ofType" => null
+                            ]
+                        ],
+                        "defaultValue" => null
+                    ]
+                ],
+                "type" => [
+                    "kind" => "OBJECT",
+                    "name" => $name,
+                    "ofType" => null
+                ],
+                "isDeprecated" => false,
+                "deprecationReason" => null
+            ];
+
+            // Singular
             $types[] = [
                 "kind" => "OBJECT",
                 "name" => $name,
@@ -327,7 +314,6 @@ class QueryModel extends Model
                 "enumValues" => null,
                 "possibleTypes" => null
             ];
-
         }
 
         $types[0]['fields'] = $queryFields;

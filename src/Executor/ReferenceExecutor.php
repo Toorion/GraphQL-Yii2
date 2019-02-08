@@ -599,8 +599,9 @@ class ReferenceExecutor implements ExecutorImplementation
             } else {
                 $methodName = 'get' . ucfirst($fieldName);
                 if (!method_exists($parentModel, $methodName)) {
+                    $modelClass = get_class($parentModel);
                     throw new Error(
-                        "Method $methodName of $parentModel not exist"
+                        "Method $methodName of $modelClass not exist"
                     );
                 }
                 $query = $parentModel->$methodName();
