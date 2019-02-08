@@ -522,9 +522,9 @@ class ReferenceExecutor implements ExecutorImplementation
         $args = [];
         if($parentModel instanceof QueryModel) {
             $objectInfo = $exeContext->queryModel->discoverObjectInfo($fieldName);
-            $returnType = $objectInfo['type'];
-            $resolveFn = $objectInfo['resolve'];
-            $args = $objectInfo['args'];
+            $returnType = $objectInfo->getType();
+            $resolveFn = $objectInfo->getResolveFn();
+            $args = $objectInfo->getArgs();
             $returnType->parentModel = $parentModel;
         } elseif($parentModel instanceof ActiveRecord) {
             $returnType = $this->typeByActiveRecord($parentModel, $fieldName);
@@ -581,7 +581,8 @@ class ReferenceExecutor implements ExecutorImplementation
 
         $multiple = false;
         $relation = null;
-        $key = strtolower($fieldName);
+        //$key = strtolower($fieldName);
+        $key = $fieldName;
         if($fieldName == Inflector::singularize($fieldName)) {
             // hasOne
         } elseif($fieldName == Inflector::pluralize($fieldName)) {
@@ -596,7 +597,7 @@ class ReferenceExecutor implements ExecutorImplementation
             if(isset($relation['class'])) {
                 $modelClass = $relation['class'];
             } else {
-                $methodName = 'get' . $fieldName;
+                $methodName = 'get' . ucfirst($fieldName);
                 if (!method_exists($parentModel, $methodName)) {
                     throw new Error(
                         "Method $methodName of $parentModel not exist"

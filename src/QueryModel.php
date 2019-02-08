@@ -11,19 +11,12 @@ use YiiGraphQL\Type\Definition\ListOfType;
 use yii\db\Query;
 use yii\helpers\Inflector;
 use YiiGraphQL\Type\Definition\Type;
+use YiiGraphQL\Error\Error;
+use YiiGraphQL\Info;
 
 class QueryModel extends Model
 {
 
-    /*
-     * 'user' => [
-     *   'class' => 'common\\models\\User',
-     *   'resolve' => function($root, $args) {
-     *           return User::find()->andWhere(['id' => $args['id']])->one();
-     *   }
-     * ]
-     *
-     */
     public $queryClasses = [];
 
     protected $tableSchemas = [];
@@ -137,7 +130,7 @@ class QueryModel extends Model
 
 
 
-    protected function typeGraphQL($stringType = 'string')
+    public function typeGraphQL($stringType = 'string')
     {
         switch($stringType) {
             case "integer":
@@ -183,21 +176,21 @@ class QueryModel extends Model
     public function discoverObjectInfo($name)
     {
         $name = str_replace('_', '.', $name);
+//
+//        $name = mb_strtolower(
+//            preg_replace( '/([a-z0-9])([A-Z])/', "$1_$2", $name )
+//        );
 
-        $name = mb_strtolower(
-            preg_replace( '/([a-z0-9])([A-Z])/', "$1_$2", $name )
-        );
-
-        $multiple = false;
-        $alias = $name;
-        if($name == Inflector::pluralize($name)) {
-            $multiple = true;
-            $alias = Inflector::singularize($name);
-        }
+        $multiple = ($name == Inflector::pluralize($name));
+        $alias = $multiple ? Inflector::singularize($name) : $name;
 
         if(!isset($this->queryClasses[$alias])) {
-            return null; //todo: throw an Exception
+            throw new Error(
+                "Config for $name -> $alias not set"
+            );
         }
+
+        return new Info($this, $this->queryClasses[$alias], $multiple);
 
         return [
             'type' => $this->getObjectType($this->queryClasses[$alias]['class'], $multiple),
@@ -244,31 +237,6 @@ class QueryModel extends Model
             return function ($root, $args) use ($className) {
                 return call_user_func($className . '::findOne', $args['id']);
             };
-        }
-    }
-
-
-    public function getArgs($typeName, $multiple)
-    {
-        if($multiple) {
-            if(isset($this->queryClasses[$typeName]['args'])) {
-                return $this->queryClasses[$typeName]['args'];
-            }
-
-            return [
-                'limit' => Type::int(),
-                'offset' => Type::int(),
-                'sort' => Type::string(),
-                'filter' => Type::string(),
-            ];
-        } else {
-            if(isset($this->queryClasses[$typeName]['argsOne'])) {
-                return $this->queryClasses[$typeName]['argsOne'];
-            }
-
-            return [
-                'id' => Type::nonNull(Type::int()),
-            ];
         }
     }
 
