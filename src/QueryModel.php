@@ -429,7 +429,7 @@ class QueryModel extends Model
 
         $relations = $this->getRelationsOf($model->tableSchema->schemaName, $model->tableSchema->name);
 
-        foreach($relations as $relation) {
+        foreach($relations as $relationKey => $relation) {
 
             /*
              * Singularize relation
@@ -446,7 +446,7 @@ class QueryModel extends Model
                     $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
 
                     $types[] = [
-                        "name" => $relationName,
+                        "name" => $relationKey,
                         "description" => $labels[lcfirst($relationName)] ?? null,
                         "args" => [],
                         "type" => [
@@ -476,7 +476,7 @@ class QueryModel extends Model
 
                     if(isset($this->queryClasses[$tbSchema->fullName])) {
                         $types[] = [
-                            "name" => $relationName,
+                            "name" => $relationKey,
                             "description" => $labels[lcfirst($relationName)] ?? null,
                             "args" => [],
                             "type" => [
