@@ -606,14 +606,16 @@ class ReferenceExecutor implements ExecutorImplementation
                 }
                 $query = $parentModel->$methodName();
                 if(!$query instanceof Query) {
+                    $modelClass = get_class($parentModel);
                     throw new Error(
-                        "Method $methodName of $parentModel not a Query"
+                        "Method $methodName of $modelClass not a Query"
                     );
                 }
                 $modelClass = $query->modelClass;
                 if($multiple != $query->multiple) {
+                    $modelClass = get_class($parentModel);
                     throw new Error(
-                        "Method $methodName of $parentModel not a same multiple type"
+                        "Method $methodName of $modelClass not a same multiple type"
                     );
                 }
             }

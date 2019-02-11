@@ -44,7 +44,7 @@ class QueryModel extends Model
             $alias = str_replace('public.', '', $key);
             if(isset($this->queryClasses[$alias]) && isset($this->queryClasses[$alias]['relations'])) {
                 foreach ($this->queryClasses[$alias]['relations'] as $relationName) {
-                    $this->relations[$alias][lcfirst($relationName)] = ['name' => ucfirst($relationName)];
+                    $this->relations[$key][lcfirst($relationName)] = ['name' => ucfirst($relationName)];
                 }
             }
 
