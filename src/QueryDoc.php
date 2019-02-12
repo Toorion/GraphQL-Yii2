@@ -314,9 +314,9 @@ class QueryDoc
                     /** @var TableSchema $tbSchema */
                     $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
 
-                    if(isset($this->queryClasses[$tbSchema->fullName])) {
+                    if(isset($this->queryModel->queryClasses[$tbSchema->fullName])) {
                         $types[] = [
-                            "name" => $relationKey,
+                            "name" => lcfirst($relationName),
                             "description" => $labels[lcfirst($relationName)] ?? null,
                             "args" => [],
                             "type" => [
