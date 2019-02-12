@@ -154,6 +154,7 @@ class QueryModel extends Model
         }
     }
 
+
     public function getObjectType($className, $multiple = false)
     {
         $alias = StringHelper::basename($className);
@@ -186,9 +187,10 @@ class QueryModel extends Model
         $alias = $multiple ? Inflector::singularize($name) : $name;
 
         if(!isset($this->queryClasses[$alias])) {
-            throw new Error(
-                "Config for $name -> $alias not set"
-            );
+            return null;
+//            throw new \Error(
+//                "Config for $name -> $alias not set"
+//            );
         }
 
         return new Info($this, $this->queryClasses[$alias], $multiple);

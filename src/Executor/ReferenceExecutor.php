@@ -56,6 +56,7 @@ use function is_array;
 use function is_object;
 use function is_string;
 use function sprintf;
+use YiiGraphQL\QueryDoc;
 
 class ReferenceExecutor implements ExecutorImplementation
 {
@@ -516,7 +517,7 @@ class ReferenceExecutor implements ExecutorImplementation
         $fieldName  = $fieldNode->name->value;
 
         if('__schema' == $fieldName) {
-            return $exeContext->queryModel->getDocumentation();
+            return (new QueryDoc($exeContext->queryModel))->build();
         }
 
         $args = [];
