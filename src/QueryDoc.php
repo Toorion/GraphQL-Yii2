@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace YiiGraphQL;
 
+use yii\db\ActiveQuery;
 use yii\db\Query;
 use yii\helpers\Inflector;
 use YiiGraphQL\Type\Definition\NonNull;
@@ -266,6 +267,37 @@ class QueryDoc
                 "deprecationReason" => null
             ];
         }
+
+        $reflectionClass = new \ReflectionClass($className);
+        $methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC );
+        foreach ($methods as $method) {
+            if(null === ($returnType = $method->getReturnType())) {
+                continue;
+            }
+
+            if($returnType->getName() == ActiveQuery::class && substr($method->name, 0, 3) == 'get') {
+                $query = $model->{$method->name}();
+                $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
+                if(!isset($this->queryModel->queryClasses[$tbSchema->fullName])) {
+                    continue;
+                }
+                $relationKey = lcfirst(substr($method->name, 3));
+                $types[] = [
+                    "name" => $relationKey,
+                    "description" => null,
+                    "args" => [],
+                    "type" => [
+                        "kind" => "OBJECT",
+                        "name" => $this->queryModel->objectNameByTableSchema($tbSchema),
+                        "ofType" => null
+                    ],
+                    "isDeprecated" => false,
+                    "deprecationReason" => null
+                ];
+            }
+        }
+
+
 
         $relations = $this->queryModel->getRelationsOf($model->tableSchema->schemaName, $model->tableSchema->name);
 
