@@ -8,11 +8,10 @@ use yii\db\TableSchema;
 use yii\helpers\StringHelper;
 use YiiGraphQL\Type\Definition\ObjectType;
 use YiiGraphQL\Type\Definition\ListOfType;
-use yii\db\Query;
 use yii\helpers\Inflector;
 use YiiGraphQL\Type\Definition\Type;
-use YiiGraphQL\Error\Error;
-use YiiGraphQL\Info;
+
+
 
 class QueryModel extends Model
 {
@@ -122,12 +121,55 @@ class QueryModel extends Model
             $tableSchema = $this->tableSchemas[$tableName] = $model::getTableSchema();
         }
 
+        /*
+         * From TableSchema
+         */
         if(isset($tableSchema->columns[$fieldName])) {
             return $this->typeGraphQL($tableSchema->columns[$fieldName]->type);
         }
 
+        /*
+         * From Model getters (get...())
+         */
+        $fields = $this->getClassFields(get_class($model));
+        if(isset($fields[$fieldName])) {
+            return $this->typeGraphQL($fields[$fieldName]);
+        }
+
         return $this->typeGraphQL();
     }
+
+
+    public function getClassFields($className)
+    {
+        $reflectionClass = new \ReflectionClass($className);
+
+        $fields = [];
+        $methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC );
+        foreach( $methods as $method) {
+
+            // Only getters can work throw magic method
+            if(substr($method->name, 0, 3) != 'get') {
+                continue;
+            }
+
+            // Only getters with optional /without parameters can pass throw GraphQL resolver
+            foreach($method->getParameters() as $parameter) {
+                if(!$parameter->isOptional()) {
+                    continue 2;
+                }
+            }
+
+            $name = lcfirst(substr($method->name, 3));
+            $type = (null === $method->getReturnType()) ? 'string' :
+                $method->getReturnType()->getName();
+
+            $fields[$name] = $type;
+        }
+        return $fields;
+    }
+
+
 
 
 
@@ -149,8 +191,10 @@ class QueryModel extends Model
             case "double":
             case "number":
                 return Type::float();
+            case "array":
+                return Type::hash();
             default:
-                throw new \Exception("Type {$stringType} unknown");
+                throw new \Error("Type {$stringType} unknown");
         }
     }
 
@@ -199,307 +243,6 @@ class QueryModel extends Model
 
 
 
-    public function getDocumentation()
-    {
-        $types = [
-            [
-                "kind" => "OBJECT",
-                "name" => "Query",
-                "description" => null,
-                "fields" => null,
-                "inputFields" => null,
-                "interfaces" => [],
-                "enumValues" => null,
-                "possibleTypes" => null
-            ],
-            [
-                "kind" => "SCALAR",
-                "name" => "Int",
-                "description" =>  "The `Int` scalar type represents non-fractional signed whole numeric\nvalues. Int can represent values between -(2^31) and 2^31 - 1. ",
-                "fields" => null,
-                "inputFields" => null,
-                "interfaces" => null,
-                "enumValues" => null,
-                "possibleTypes" => null
-            ],
-            [
-                "kind" => "SCALAR",
-                "name" => "String",
-                "description" => "The `String` scalar type represents textual data, represented as UTF-8\ncharacter sequences. The String type is most often used by GraphQL to\nrepresent free-form human-readable text.",
-                "fields" => null,
-                "inputFields" => null,
-                "interfaces" => null,
-                "enumValues" => null,
-                "possibleTypes" => null
-            ],
-            [
-                "kind" => "SCALAR",
-                "name" => "Boolean",
-                "description" => "The `Boolean` scalar type represents `true` or `false`.",
-                "fields" => null,
-                "inputFields" => null,
-                "interfaces" => null,
-                "enumValues" => null,
-                "possibleTypes" => null
-            ]
-        ];
-        $queryFields = [];
-        foreach($this->queryClasses as $name => $row) {
-            $name = str_replace('.', '_', $this->getTableAlias($name));
-
-            // Singular
-            $queryFields[] = [
-                "name" => $name,
-                "description" => $row['description'] ?? null,
-                "args" => [
-                    [
-                        "name" => "id",
-                        "description" => null,
-                        "type" => [
-                            "kind" => "NON_NULL",
-                            "name" => null,
-                            "ofType" => [
-                                "kind" => "SCALAR",
-                                "name" => "Int",
-                                "ofType" => null
-                            ]
-                        ],
-                        "defaultValue" => null
-                    ]
-                ],
-                "type" => [
-                    "kind" => "OBJECT",
-                    "name" => $name,
-                    "ofType" => null
-                ],
-                "isDeprecated" => false,
-                "deprecationReason" => null
-            ];
-
-            // Plural
-            $queryFields[] = [
-                "name" => Inflector::pluralize($name),
-                "description" => $row['description'] ?? null,
-                "args" => [
-                    [
-                        "name" => "id",
-                        "description" => null,
-                        "type" => [
-                            "kind" => "NON_NULL",
-                            "name" => null,
-                            "ofType" => [
-                                "kind" => "SCALAR",
-                                "name" => "Int",
-                                "ofType" => null
-                            ]
-                        ],
-                        "defaultValue" => null
-                    ]
-                ],
-                "type" => [
-                    "kind" => "OBJECT",
-                    "name" => $name,
-                    "ofType" => null
-                ],
-                "isDeprecated" => false,
-                "deprecationReason" => null
-            ];
-
-            // Singular
-            $types[] = [
-                "kind" => "OBJECT",
-                "name" => $name,
-                "description" => $row['description'] ?? null,
-                "fields" => $this->getFieldsDoc($row),
-                "inputFields" => null,
-                "interfaces" => [],
-                "enumValues" => null,
-                "possibleTypes" => null
-            ];
-        }
-
-        $types[0]['fields'] = $queryFields;
-
-        return [
-            'queryType' => [
-                'name' => 'Query'
-            ],
-            'mutationType' => null,
-            'subscriptionType' => null,
-            'types' => $types,
-            "directives" => [
-                [
-                    "name" => "include",
-                    "description" => "Directs the executor to include this field or fragment only when the `if` argument is true.",
-                    "locations" => [
-                        "FIELD",
-                        "FRAGMENT_SPREAD",
-                        "INLINE_FRAGMENT"
-                    ],
-                    "args" => [
-                        [
-                            "name" => "if",
-                            "description" => "Included when true.",
-                            "type" => [
-                                "kind" => "NON_NULL",
-                                "name" => null,
-                                "ofType" => [
-                                    "kind" => "SCALAR",
-                                    "name" => "Boolean",
-                                    "ofType" => null
-                                ]
-                            ],
-                            "defaultValue" => null
-                        ]
-                    ]
-                ],
-                [
-                    "name" => "skip",
-                    "description" => "Directs the executor to skip this field or fragment when the `if` argument is true.",
-                    "locations" => [
-                        "FIELD",
-                        "FRAGMENT_SPREAD",
-                        "INLINE_FRAGMENT"
-                    ],
-                    "args" => [
-                        [
-                            "name" => "if",
-                            "description" => "Skipped when true.",
-                            "type" => [
-                            "kind" => "NON_NULL",
-                            "name" => null,
-                            "ofType" => [
-                                    "kind" => "SCALAR",
-                                    "name" => "Boolean",
-                                    "ofType" => null
-                                ]
-                            ],
-                            "defaultValue" => null
-                        ]
-                    ]
-                ],
-                [
-                    "name" => "deprecated",
-                    "description" => "Marks an element of a GraphQL schema as no longer supported.",
-                    "locations" => [
-                        "FIELD_DEFINITION",
-                        "ENUM_VALUE"
-                    ],
-                    "args" => [
-                            [
-                            "name" => "reason",
-                            "description" => "Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted in [Markdown](https://daringfireball.net/projects/markdown/).",
-                            "type" => [
-                                "kind" => "SCALAR",
-                                "name" =>  "String",
-                                "ofType" =>  null
-                            ],
-                            "defaultValue" => "\"No longer supported\""
-                        ]
-                    ]
-                ]
-            ]
-        ];
-    }
-
-
-    public function getFieldsDoc($config)
-    {
-        $tableSchema = call_user_func([$config['class'], 'getTableSchema']);
-
-        $className = $config['class'];
-
-        $model = new $className;
-
-        $labels = $model->attributeLabels();
-
-        $types = [];
-        foreach($tableSchema->columns as $name => $schema) {
-            $types[] = [
-                "name" => $name,
-                "description" => $labels[$name] ?? null,
-                "args" => [],
-                "type" => [
-                    "kind" => "SCALAR",
-                    "name" => $this->typeGraphQL($schema->type)->toString(),
-                    "ofType" => null
-                ],
-                "isDeprecated" => false,
-                "deprecationReason" => null
-            ];
-        }
-
-        $relations = $this->getRelationsOf($model->tableSchema->schemaName, $model->tableSchema->name);
-
-        foreach($relations as $relationKey => $relation) {
-
-            /*
-             * Singularize relation
-             */
-            $relationName = $relation['name'];
-            $methodName = 'get' . $relationName;
-            if (method_exists($model, $methodName)) {
-                $query = $model->$methodName();
-                if ($query instanceof Query) {
-//                    $modelClass = $query->modelClass;
-//                    $multiple = $query->multiple;
-
-                    /** @var TableSchema $tbSchema */
-                    $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
-
-                    $types[] = [
-                        "name" => $relationKey,
-                        "description" => $labels[lcfirst($relationName)] ?? null,
-                        "args" => [],
-                        "type" => [
-                            "kind" => "OBJECT",
-                            "name" => $this->objectNameByTableSchema($tbSchema),
-                            "ofType" => null
-                        ],
-                        "isDeprecated" => false,
-                        "deprecationReason" => null
-                    ];
-                }
-            }
-
-            /*
-             * Pluralize relations
-             */
-            $relationName = Inflector::pluralize($relation['name']);
-            $methodName = 'get' . $relationName;
-            if (method_exists($model, $methodName)) {
-                $query = $model->$methodName();
-                if ($query instanceof Query) {
-//                    $modelClass = $query->modelClass;
-//                    $multiple = $query->multiple;
-
-                    /** @var TableSchema $tbSchema */
-                    $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
-
-                    if(isset($this->queryClasses[$tbSchema->fullName])) {
-                        $types[] = [
-                            "name" => $relationKey,
-                            "description" => $labels[lcfirst($relationName)] ?? null,
-                            "args" => [],
-                            "type" => [
-                                "kind" => "LIST",
-                                "name" => null,
-                                "ofType" => [
-                                    "kind" => "OBJECT",
-                                    "name" => $this->objectNameByTableSchema($tbSchema),
-                                    "ofType" => null
-                                ]
-                            ],
-                            "isDeprecated" => false,
-                            "deprecationReason" => null
-                        ];
-                    }
-                }
-            }
-        }
-
-        return $types;
-    }
 
 
     public function getTableAlias( $tableName )

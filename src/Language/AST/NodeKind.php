@@ -34,6 +34,7 @@ class NodeKind
     const LST          = 'ListValue';
     const OBJECT       = 'ObjectValue';
     const OBJECT_FIELD = 'ObjectField';
+    const ARRAY        = 'ArrayValue';
     // Directives
 
     const DIRECTIVE = 'Directive';
@@ -100,6 +101,7 @@ class NodeKind
         self::LST                          => ListValueNode::class,
         self::OBJECT                       => ObjectValueNode::class,
         self::OBJECT_FIELD                 => ObjectFieldNode::class,
+        self::ARRAY                        => ArrayValueNode::class,
 
         // Directives
         self::DIRECTIVE                    => DirectiveNode::class,

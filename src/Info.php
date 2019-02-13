@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace YiiGraphQL;
 
 use yii\db\Query;
+use yii\helpers\StringHelper;
 use YiiGraphQL\Type\Definition\Type;
+use YiiGraphQL\Type\YiiType;
 
 class Info
 {
@@ -17,6 +19,8 @@ class Info
     const RESOLVE = 'resolve';
 
     const QUERY = 'query';
+
+    const SEARCH_CLASS = 'searchClass';
 
     /** @var QueryModel */
     protected $queryModel;
@@ -51,8 +55,16 @@ class Info
             }
 
             return function ($root, $args) use ($className) {
+
                 /** @var Query $query */
-                $query = call_user_func($className . '::find');
+                if(isset($this->config[self::SEARCH_CLASS])) {
+                    $searchClass = $this->config[self::SEARCH_CLASS];
+                    $searchModel = new $searchClass();
+                    $query = $searchModel->search([StringHelper::basename($searchClass) => $args])->query;
+                } else {
+                    $query = call_user_func($className . '::find');
+                }
+
                 if (isset($args['limit'])) {
                     $query->limit($args['limit']);
                 }
@@ -107,9 +119,22 @@ class Info
 
             if(isset($this->config[self::EXPAND][self::ANY][self::ARGS])) {
                 foreach($this->config[self::EXPAND][self::ANY][self::ARGS] as $name => $type) {
-                    $args[$name] = $this->queryModel->typeGraphQL($type);
+                    $graphType =  YiiType::cast($type);
+                    if(null !== $graphType) {
+                        $args[$name] = $graphType;
+                    }
                 }
             }
+
+            if(isset($this->config[self::SEARCH_CLASS])) {
+                foreach ($this->argsBySearchModel() as $name => $type) {
+                    $graphType =  YiiType::cast($type);
+                    if(null !== $graphType) {
+                        $args[$name] = $graphType;
+                    }
+                }
+            }
+
         } else {
             if(isset($this->config[self::ARGS])) {
                 return $this->config[self::ARGS];
@@ -121,7 +146,7 @@ class Info
 
             if(isset($this->config[self::EXPAND][self::ARGS])) {
                 foreach($this->config[self::EXPAND][self::ARGS] as $name => $type) {
-                    $args[$name] = $this->queryModel->typeGraphQL($type);
+                    $args[$name] = YiiType::cast($type);
                 }
             }
         }
@@ -130,4 +155,40 @@ class Info
     }
 
 
+
+    protected function argsBySearchModel()
+    {
+        $args = [];
+
+        $className = $this->config[self::SEARCH_CLASS];
+
+        $reflectionClass = new \ReflectionClass($className);
+        $properties = $reflectionClass->getProperties(\ReflectionProperty::IS_PUBLIC);
+        foreach($properties as $property) {
+            if($property->class == $className) {
+                $args[$property->name] = 'string';
+            }
+        }
+
+        if(method_exists($this->config[self::SEARCH_CLASS], 'rules')) {
+
+            $model = new $className();
+            $rules = $model->rules();
+
+            foreach($rules as $rule) {
+                $type = $rule[1];
+                if(null === $type)
+                    continue;
+
+                if(is_array($rule[0])) {
+                    foreach($rule[0] as $varName) {
+                        $args[$varName] = $type;
+                    }
+                } else {
+                    $args[$rule[0]] = $type;
+                }
+            }
+        }
+        return $args;
+    }
 }

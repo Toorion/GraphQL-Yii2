@@ -32,6 +32,7 @@ abstract class Type implements JsonSerializable
     public const BOOLEAN = 'Boolean';
     public const FLOAT   = 'Float';
     public const ID      = 'ID';
+    public const ARRAY   = 'Array';
 
     /** @var Type[] */
     private static $standardTypes;
@@ -78,6 +79,7 @@ abstract class Type implements JsonSerializable
                 self::FLOAT   => new FloatType(),
                 self::INT     => new IntType(),
                 self::BOOLEAN => new BooleanType(),
+                self::ARRAY   => new ArrayType(),
             ];
         }
 
@@ -123,6 +125,17 @@ abstract class Type implements JsonSerializable
     {
         return self::getStandardType(self::FLOAT);
     }
+
+    /**
+     * @return ArrayType
+     *
+     * @api
+     */
+    public static function hash()
+    {
+        return self::getStandardType(self::ARRAY);
+    }
+
 
     /**
      * @param Type|ObjectType|InterfaceType|UnionType|ScalarType|InputObjectType|EnumType|ListOfType|NonNull $wrappedType
