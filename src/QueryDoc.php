@@ -205,10 +205,10 @@ class QueryDoc
                         "ofType" => [
                             "kind" => "SCALAR",
                             "name" => $argType->getWrappedType()->toString(),
-                            "ofType" => null
+                            "ofType" => null,
                         ]
                     ],
-                    "defaultValue" => null
+                    "defaultValue" => isset($argType->config['defaultValue']) ? $argType->config['defaultValue'] : null,
                 ];
             } else {
                 $args[] = [
@@ -219,7 +219,7 @@ class QueryDoc
                         "name" => $argType->toString(),
                         "ofType" => null
                     ],
-                    "defaultValue" => null
+                    "defaultValue" => isset($argType->config['defaultValue']) ? $argType->config['defaultValue'] : null,
                 ];
             }
 

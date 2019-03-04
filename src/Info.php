@@ -56,6 +56,8 @@ class Info
 
             return function ($root, $args) use ($className) {
 
+                $xPagination = isset($args['x_pagination']) && $args['x_pagination'] === true;
+
                 /** @var Query $query */
                 if(isset($this->config[self::SEARCH_CLASS])) {
                     $searchClass = $this->config[self::SEARCH_CLASS];
@@ -65,17 +67,26 @@ class Info
                     $query = call_user_func($className . '::find');
                 }
 
+                if (isset($args['filter'])) {
+                    $query->andWhere($args['filter']);
+                }
+
+                if($xPagination) {
+                    $count = $query->count();
+                    $limit = $count;
+                    $offset = 0;
+                }
+
                 if (isset($args['limit'])) {
                     $query->limit($args['limit']);
+                    $limit = $args['limit'];
                 }
                 if (isset($args['offset'])) {
                     $query->offset($args['offset']);
+                    $offset = $args['offset'];
                 }
                 if (isset($args['sort'])) {
                     $query->orderBy($args['sort']);
-                }
-                if (isset($args['filter'])) {
-                    $query->andWhere($args['filter']);
                 }
 
                 if(isset($this->config[self::EXPAND][self::ANY][self::QUERY])) {
@@ -83,6 +94,13 @@ class Info
                     if(is_callable($queryFn)) {
                         $queryFn($query, $args);
                     }
+                }
+
+                if($xPagination) {
+                    header("X-Pagination-Total-Count: " . $count);
+                    header("X-Pagination-Page-Count: " . ceil($count / $limit));
+                    header("X-Pagination-Current-Page: " . ceil($offset / $limit));
+                    header("X-Pagination-Per-Page: " . $limit);
                 }
 
                 return $query->all();
@@ -110,11 +128,15 @@ class Info
                 return $this->config['any']['args'];
             }
 
+            $xPagination = Type::boolean();
+            $xPagination->config['defaultValue'] = 'false';
+
             $args = [
                 'limit' => Type::int(),
                 'offset' => Type::int(),
                 'sort' => Type::string(),
                 'filter' => Type::string(),
+                'x_pagination' => $xPagination,
             ];
 
             if(isset($this->config[self::EXPAND][self::ANY][self::ARGS])) {
