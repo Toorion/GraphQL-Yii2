@@ -8,6 +8,7 @@ use yii\db\Query;
 use yii\helpers\Inflector;
 use YiiGraphQL\Type\Definition\NonNull;
 use YiiGraphQL\Type\Definition\WrappingType;
+use YiiGraphQL\Type\YiiType;
 
 class QueryDoc
 {
@@ -189,7 +190,7 @@ class QueryDoc
 
     protected function buildObjectType($name, $objectName, $description)
     {
-        if(null === ($info = $this->queryModel->discoverObjectInfo($name))) {
+        if(null === ($info = $this->queryModel->objectInfoByName($name))) {
             return null;
         }
 
@@ -254,13 +255,17 @@ class QueryDoc
 
         $types = [];
         foreach($tableSchema->columns as $name => $schema) {
+            if(null === ($type = YiiType::cast($schema->type))) {
+                continue;
+            }
+
             $types[] = [
                 "name" => $name,
                 "description" => $labels[$name] ?? null,
                 "args" => [],
                 "type" => [
                     "kind" => "SCALAR",
-                    "name" => $this->queryModel->typeGraphQL($schema->type)->toString(),
+                    "name" => YiiType::cast($schema->type)->toString(),
                     "ofType" => null
                 ],
                 "isDeprecated" => false,
@@ -268,20 +273,49 @@ class QueryDoc
             ];
         }
 
+        $relations = $this->queryModel->getRelationsOf($model->tableSchema->schemaName, $model->tableSchema->name);
+
         $reflectionClass = new \ReflectionClass($className);
         $methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC );
         foreach ($methods as $method) {
-            if(null === ($returnType = $method->getReturnType())) {
+
+            $relationKey = substr($method->name, 0, 3) == 'get' ?
+                lcfirst(substr($method->name, 3)) :
+                $method->name;
+
+            if(null === ($returnType = $method->getReturnType()) || !is_a($returnType->getName(), Query::class, true)) {
+                if(!isset($relations[$relationKey])) {
+                    continue;
+                }
+            }
+
+            $query = $model->{$method->name}();
+            if(!$query instanceof  Query) {
+                continue;
+            }
+            $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
+            if(!isset($this->queryModel->queryClasses[$tbSchema->fullName])) {
                 continue;
             }
 
-            if($returnType->getName() == ActiveQuery::class && substr($method->name, 0, 3) == 'get') {
-                $query = $model->{$method->name}();
-                $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
-                if(!isset($this->queryModel->queryClasses[$tbSchema->fullName])) {
-                    continue;
-                }
-                $relationKey = lcfirst(substr($method->name, 3));
+            if($query->multiple) {
+                $types[] = [
+                    "name" => $relationKey,
+                    "description" => null,
+                    "args" => [],
+                    "type" => [
+                        "kind" => "LIST",
+                        "name" => null,
+                        "ofType" => [
+                            "kind" => "OBJECT",
+                            "name" => $this->queryModel->objectNameByTableSchema($tbSchema),
+                            "ofType" => null
+                        ]
+                    ],
+                    "isDeprecated" => false,
+                    "deprecationReason" => null
+                ];
+            } else {
                 $types[] = [
                     "name" => $relationKey,
                     "description" => null,
@@ -297,9 +331,8 @@ class QueryDoc
             }
         }
 
+        return $types;
 
-
-        $relations = $this->queryModel->getRelationsOf($model->tableSchema->schemaName, $model->tableSchema->name);
 
         foreach($relations as $relationKey => $relation) {
 

@@ -10,11 +10,14 @@ use YiiGraphQL\Type\Definition\ObjectType;
 use YiiGraphQL\Type\Definition\ListOfType;
 use yii\helpers\Inflector;
 use YiiGraphQL\Type\Definition\Type;
-
-
+use YiiGraphQL\Type\YiiType;
+use yii\db\ActiveRecord;
+use yii\db\Query;
+use YiiGraphQL\Info\InfoRegistry;
 
 class QueryModel extends Model
 {
+    const DEFAULT_FIELD_TYPE = 'string';
 
     public $queryClasses = [];
 
@@ -23,8 +26,6 @@ class QueryModel extends Model
     protected $foreignKeys;
 
     protected $relations = [];
-
-    protected $types = [];
 
     public function __construct(array $queryClasses)
     {
@@ -125,7 +126,7 @@ class QueryModel extends Model
          * From TableSchema
          */
         if(isset($tableSchema->columns[$fieldName])) {
-            return $this->typeGraphQL($tableSchema->columns[$fieldName]->type);
+            return YiiType::cast($tableSchema->columns[$fieldName]->type);
         }
 
         /*
@@ -133,10 +134,10 @@ class QueryModel extends Model
          */
         $fields = $this->getClassFields(get_class($model));
         if(isset($fields[$fieldName])) {
-            return $this->typeGraphQL($fields[$fieldName]);
+            return YiiType::cast($fields[$fieldName]);
         }
 
-        return $this->typeGraphQL();
+        return YiiType::cast(self::DEFAULT_FIELD_TYPE);
     }
 
 
@@ -153,7 +154,7 @@ class QueryModel extends Model
                 continue;
             }
 
-            // Only getters with optional /without parameters can pass throw GraphQL resolver
+            // Only getters with optional/without parameters can pass throw GraphQL resolver
             foreach($method->getParameters() as $parameter) {
                 if(!$parameter->isOptional()) {
                     continue 2;
@@ -167,35 +168,6 @@ class QueryModel extends Model
             $fields[$name] = $type;
         }
         return $fields;
-    }
-
-
-
-
-
-    public function typeGraphQL($stringType = 'string')
-    {
-        switch($stringType) {
-            case "integer":
-            case "int":
-            case "smallint":
-            case "bigint":
-                return Type::int();
-            case "string":
-            case "safe":
-            case "text":
-            case "json":
-                return Type::string();
-            case "boolean":
-                return Type::boolean();
-            case "double":
-            case "number":
-                return Type::float();
-            case "array":
-                return Type::hash();
-            default:
-                throw new \Error("Type {$stringType} unknown");
-        }
     }
 
 
@@ -219,29 +191,6 @@ class QueryModel extends Model
     }
 
 
-    public function discoverObjectInfo($name)
-    {
-        $name = str_replace('_', '.', $name);
-
-        $name = mb_strtolower(
-            preg_replace( '/([a-z0-9])([A-Z])/', "$1_$2", $name )
-        );
-
-        $multiple = ($name == Inflector::pluralize($name));
-        $alias = $multiple ? Inflector::singularize($name) : $name;
-
-        if(!isset($this->queryClasses[$alias])) {
-            return null;
-//            throw new \Error(
-//                "Config for $name -> $alias not set"
-//            );
-        }
-
-        return new Info($this, $this->queryClasses[$alias], $multiple);
-    }
-
-
-
 
 
 
@@ -262,5 +211,93 @@ class QueryModel extends Model
 
         return $objectName;
     }
+
+
+    public function objectInfoByName($name)
+    {
+        // scheme_camelCaseName -> scheme.camelCaseName
+        $name = str_replace('_', '.', $name);
+
+        // scheme.camelCaseName -> scheme.camel_case_name
+        $name = mb_strtolower(
+            preg_replace( '/([a-z0-9])([A-Z])/', "$1_$2", $name )
+        );
+
+        $multiple = ($name == Inflector::pluralize($name));
+        $alias = $multiple ? Inflector::singularize($name) : $name;
+
+        if(!isset($this->queryClasses[$alias])) {
+            return null;
+//            throw new \Error(
+//                "Config for $name -> $alias not set"
+//            );
+        }
+
+        return InfoRegistry::getInfo($this->queryClasses[$alias], $multiple);
+    }
+
+
+
+    public function objectInfoByActiveRecord(ActiveRecord $parentModel, $fieldName)
+    {
+        $isQuery = false;
+        $getter = 'get' . ucfirst($fieldName);
+        if(method_exists($parentModel, $getter)) {
+
+            $multiple = false;
+            $key = $fieldName;
+            if ($fieldName == Inflector::singularize($fieldName)) {
+                // hasOne
+            } elseif ($fieldName == Inflector::pluralize($fieldName)) {
+                // hasMany
+                $multiple = true;
+                $key = Inflector::singularize($key);
+            }
+
+            $reflectionClass = new \ReflectionClass($parentModel);
+            $method = $reflectionClass->getMethod($getter);
+            if (null !== ($type = $method->getReturnType())) {
+                $typeName = $method->getReturnType()->getName();
+                if (is_a($typeName, Query::class, true)) {
+                    $isQuery = true;
+                }
+            }
+
+            if (!$isQuery) {
+                $relations = $this->getRelationsOf($parentModel->tableSchema->schemaName, $parentModel->tableSchema->name);
+
+                // Check for relation really exists
+                if (isset($relations[$key])) {
+                    $isQuery = true;
+                }
+            }
+        }
+
+        if ($isQuery) {
+            $query = $parentModel->$getter();
+            if (!$query instanceof Query) {
+                $modelClass = get_class($parentModel);
+                throw new \Error(
+                    "Method $getter of $modelClass not a Query"
+                );
+            }
+            if ($multiple != $query->multiple) {
+                $parentClass = get_class($parentModel);
+                throw new \Error(
+                    "Method $getter of $parentClass not a same multiple type"
+                );
+            }
+
+            $modelClass = $query->modelClass;
+            $tableName = $modelClass::tableName();
+
+            if(isset($this->queryClasses[$tableName])) {
+                return InfoRegistry::getInfo($this->queryClasses[$tableName], $multiple)->getType();
+            }
+        }
+
+        return $this->getFieldType($parentModel, $fieldName);
+    }
+
 
 }

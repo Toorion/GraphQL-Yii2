@@ -6,7 +6,8 @@
   "homepage":          "https://github.com/toorion/graphql-yii2",
   "keywords":          [
     "graphql",
-    "API"
+    "API",
+    "Yii2"
   ],
   "require": {
     "php": "^7.1",
