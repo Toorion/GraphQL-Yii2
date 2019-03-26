@@ -289,7 +289,7 @@ class QueryModel extends Model
             }
 
             $modelClass = $query->modelClass;
-            $tableName = $modelClass::tableName();
+            $tableName = $modelClass::getTableSchema()->fullName;
 
             if(isset($this->queryClasses[$tableName])) {
                 return InfoRegistry::getInfo($this->queryClasses[$tableName], $multiple)->getType();
