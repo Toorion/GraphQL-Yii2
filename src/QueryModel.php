@@ -224,16 +224,21 @@ class QueryModel extends Model
         );
 
         $multiple = ($name == Inflector::pluralize($name));
-        $alias = $multiple ? Inflector::singularize($name) : $name;
+        $key = $multiple ? Inflector::singularize($name) : $name;
 
-        if(!isset($this->queryClasses[$alias])) {
+        return $this->objectInfoByKey($key, $multiple);
+    }
+
+
+    public function objectInfoBykey($key, $multiple) {
+        if(!isset($this->queryClasses[$key])) {
             return null;
 //            throw new \Error(
 //                "Config for $name -> $alias not set"
 //            );
         }
 
-        return InfoRegistry::getInfo($this->queryClasses[$alias], $multiple);
+        return InfoRegistry::getInfo($this->queryClasses[$key], $multiple);
     }
 
 

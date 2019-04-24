@@ -521,9 +521,6 @@ class ReferenceExecutor implements ExecutorImplementation
 
         $args = [];
         if ($parentModel instanceof QueryModel) {
-            // todo: Остановились на multiple, которое у разного Info разная
-
-
             $objectInfo = $exeContext->queryModel->objectInfoByName($fieldName);
             $returnType = $objectInfo->getType();
             $resolveFn = $objectInfo->getResolveFn();

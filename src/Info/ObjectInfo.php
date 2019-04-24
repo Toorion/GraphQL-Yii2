@@ -23,7 +23,7 @@ class ObjectInfo
      */
 
     /**
-     * @var string - Yii2 ActiveRecord
+     * @var string - Yii2 Model
      */
     public $class;
 
@@ -71,16 +71,12 @@ class ObjectInfo
         if (is_callable($this->resolve)) {
             return $this->resolve;
         }
-
-        return function ($root, $args) {
-            // Expand find one unintelligible
-            return call_user_func($this->class . '::findOne', $args['id']);
-        };
     }
 
 
     public function getArgs()
     {
+        $args = [];
         if (count($this->args) > 0) {
             $args = [];
             foreach ($this->args as $name => $type) {
@@ -89,12 +85,7 @@ class ObjectInfo
                 }
                 $args[$name] = $graphType;
             }
-            return $args;
         }
-
-        $args = [
-            'id' => Type::nonNull(Type::int()),
-        ];
 
         foreach ($this->expandArgs as $name => $type) {
             if( null === ($graphType = YiiType::cast($type))) {

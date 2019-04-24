@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace YiiGraphQL;
 
 use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 use yii\db\Query;
 use yii\helpers\Inflector;
 use YiiGraphQL\Type\Definition\NonNull;
@@ -154,18 +155,29 @@ class QueryDoc
             ]
         ];
         $queryFields = [];
-        foreach($this->queryModel->queryClasses as $name => $row) {
-            $name = str_replace('.', '_', $this->queryModel->getTableAlias($name));
+        foreach($this->queryModel->queryClasses as $key => $row) {
+            if(is_a($row['class'], ActiveRecord::class, true)) {
+                $name = str_replace('.', '_', $this->queryModel->getTableAlias($key));
 
-            // Singular
-            if(null !== ($objectInfo = $this->buildObjectType($name, $name, $row['description'] ?? null))) {
-                $queryFields[] = $objectInfo;
-            }
+                // Singular
+                if (null !== ($objectInfo = $this->buildObjectType($key, $name, $name, false, $row['description'] ?? null))) {
+                    $queryFields[] = $objectInfo;
+                }
 
-            // Plural
-            $plural = Inflector::pluralize($name);
-            if(null !== ($objectInfo = $this->buildObjectType($plural, $name, $row['description'] ?? null))) {
-                $queryFields[] = $objectInfo;
+                // Plural
+                $plural = Inflector::pluralize($name);
+                if (null !== ($objectInfo = $this->buildObjectType($key, $plural, $name, true, $row['description'] ?? null))) {
+                    $queryFields[] = $objectInfo;
+                }
+
+                $fields = $this->getTableFieldsDoc($row);
+            } else {
+                $name = lcfirst(str_replace('_', '', ucwords($key, '_')));
+                if (null !== ($objectInfo = $this->buildObjectType($key, $name, $name, false,$row['description'] ?? null))) {
+                    $queryFields[] = $objectInfo;
+                }
+
+                $fields = $this->getObjectFieldsDoc($row);
             }
 
             // Singular
@@ -173,13 +185,14 @@ class QueryDoc
                 "kind" => "OBJECT",
                 "name" => $name,
                 "description" => $row['description'] ?? null,
-                "fields" => $this->getFieldsDoc($row),
+                "fields" => $fields,
                 "inputFields" => null,
                 "interfaces" => [],
                 "enumValues" => null,
                 "possibleTypes" => null
             ];
         }
+
 
         $types[0]['fields'] = $queryFields;
 
@@ -188,9 +201,9 @@ class QueryDoc
 
 
 
-    protected function buildObjectType($name, $objectName, $description)
+    protected function buildObjectType($key, $name, $typeName, $multiple, $description)
     {
-        if(null === ($info = $this->queryModel->objectInfoByName($name))) {
+        if(null === ($info = $this->queryModel->objectInfoByKey($key, $multiple))) {
             return null;
         }
 
@@ -232,7 +245,7 @@ class QueryDoc
             "args" => $args,
             "type" => [
                 "kind" => "OBJECT",
-                "name" => $objectName,
+                "name" => $typeName,
                 "ofType" => null
             ],
             "isDeprecated" => false,
@@ -243,7 +256,7 @@ class QueryDoc
 
 
 
-    public function getFieldsDoc($config)
+    protected function getTableFieldsDoc($config)
     {
         $tableSchema = call_user_func([$config['class'], 'getTableSchema']);
 
@@ -265,7 +278,7 @@ class QueryDoc
                 "args" => [],
                 "type" => [
                     "kind" => "SCALAR",
-                    "name" => YiiType::cast($schema->type)->toString(),
+                    "name" => $type->toString(),
                     "ofType" => null
                 ],
                 "isDeprecated" => false,
@@ -332,79 +345,37 @@ class QueryDoc
         }
 
         return $types;
+    }
 
 
-        foreach($relations as $relationKey => $relation) {
 
-            /*
-             * Singularize relation
-             */
-            $relationName = $relation['name'];
-            $methodName = 'get' . $relationName;
-            if (method_exists($model, $methodName)) {
-                $query = $model->$methodName();
-                if ($query instanceof Query) {
-//                    $modelClass = $query->modelClass;
-//                    $multiple = $query->multiple;
+    protected function getObjectFieldsDoc($config)
+    {
+        $className = $config['class'];
+        $fields = $className::objectFields();
 
-                    /** @var TableSchema $tbSchema */
-                    $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
-
-                    $types[] = [
-                        "name" => $relationKey,
-                        "description" => $labels[lcfirst($relationName)] ?? null,
-                        "args" => [],
-                        "type" => [
-                            "kind" => "OBJECT",
-                            "name" => $this->queryModel->objectNameByTableSchema($tbSchema),
-                            "ofType" => null
-                        ],
-                        "isDeprecated" => false,
-                        "deprecationReason" => null
-                    ];
-                }
+        $types = [];
+        foreach($fields as $name => $baseType) {
+            if(null === ($type = YiiType::cast($baseType))) {
+                continue;
             }
 
-            /*
-             * Pluralize relations
-             */
-            $relationName = Inflector::pluralize($relation['name']);
-            $methodName = 'get' . $relationName;
-            if (method_exists($model, $methodName)) {
-                $query = $model->$methodName();
-                if ($query instanceof Query) {
-//                    $modelClass = $query->modelClass;
-//                    $multiple = $query->multiple;
-
-                    /** @var TableSchema $tbSchema */
-                    $tbSchema = call_user_func([$query->modelClass, 'getTableSchema']);
-
-                    if(isset($this->queryModel->queryClasses[$tbSchema->fullName])) {
-                        $types[] = [
-                            "name" => lcfirst($relationName),
-                            "description" => $labels[lcfirst($relationName)] ?? null,
-                            "args" => [],
-                            "type" => [
-                                "kind" => "LIST",
-                                "name" => null,
-                                "ofType" => [
-                                    "kind" => "OBJECT",
-                                    "name" => $this->queryModel->objectNameByTableSchema($tbSchema),
-                                    "ofType" => null
-                                ]
-                            ],
-                            "isDeprecated" => false,
-                            "deprecationReason" => null
-                        ];
-                    }
-                }
-            }
+            $types[] = [
+                "name" => $name,
+                "description" => $labels[$name] ?? null,
+                "args" => [],
+                "type" => [
+                    "kind" => "SCALAR",
+                    "name" => $type->toString(),
+                    "ofType" => null
+                ],
+                "isDeprecated" => false,
+                "deprecationReason" => null
+            ];
         }
 
         return $types;
     }
-
-
 
 
 }
