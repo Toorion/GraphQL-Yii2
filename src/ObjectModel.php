@@ -33,7 +33,7 @@ abstract class ObjectModel extends Model
 
     abstract public static function objectFields();
 
-    public function getRequestFields(ResolveInfo $info) {
+    public static function getRequestFields(ResolveInfo $info) {
         $fieldNode = $info->fieldNodes[0];
         $selectionSet = $fieldNode->selectionSet;
         $selections = $selectionSet->selections;
