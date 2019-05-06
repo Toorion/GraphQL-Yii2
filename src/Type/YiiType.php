@@ -8,28 +8,44 @@ use YiiGraphQL\Type\Definition\Type;
 
 class YiiType
 {
-    public static function cast( $dbTypeName )
+    public static function cast( $typeName )
     {
-        switch($dbTypeName) {
+        $required = false;
+        if(substr($typeName, -1) == '!') {
+            $required = true;
+            $typeName = substr($typeName, 0, -1);
+        }
+
+        $type = null;
+        switch($typeName) {
             case "integer":
             case "int":
             case "smallint":
             case "bigint":
-                return Type::int();
+                $type = Type::int();
+                break;
             case "string":
             case "safe":
             case "text":
             case "json":
-                return Type::string();
+                $type = Type::string();
+                break;
             case "boolean":
-                return Type::boolean();
+                $type = Type::boolean();
+                break;
             case "double":
             case "number":
-                return Type::float();
+                $type = Type::float();
+                break;
             case "array":
-                return Type::hash();
+                $type = Type::hash();
+                break;
         }
 
-        return null;
+        if($required) {
+            return Type::nonNull($type);
+        }
+
+        return $type;
     }
 }

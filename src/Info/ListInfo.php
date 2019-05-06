@@ -52,24 +52,7 @@ class ListInfo extends ObjectInfo
 
     public function getArgs()
     {
-        if (count($this->argsAny) > 0) {
-            $args = [];
-            foreach ($this->argsAny as $name => $type) {
-                if( null === ($graphType = YiiType::cast($type))) {
-                    continue;
-                }
-                $args[$name] = $graphType;
-            }
-        }
-
-        foreach($this->expandArgsAny as $name => $type) {
-            $graphType =  YiiType::cast($type);
-            if(null !== $graphType) {
-                $args[$name] = $graphType;
-            }
-        }
-
-        return $args;
+        return self::_assignArgs($this->argsAny, $this->expandArgsAny);
     }
 
 }

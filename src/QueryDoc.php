@@ -212,7 +212,7 @@ class QueryDoc
             if($argType instanceof NonNull) {
                 $args[] = [
                     "name" => $argName,
-                    "description" => null,
+                    "description" => $info->_argDescriptions[$argName] ?? null,
                     "type" => [
                         "kind" => "NON_NULL",
                         "name" => null,
@@ -227,7 +227,7 @@ class QueryDoc
             } else {
                 $args[] = [
                     "name" => $argName,
-                    "description" => null,
+                    "description" => $info->_argDescriptions[$argName] ?? null,
                     "type" => [
                         "kind" => "SCALAR",
                         "name" => $argType->toString(),

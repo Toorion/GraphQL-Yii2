@@ -43,6 +43,8 @@ class ObjectInfo
     public $expandArgs = [];
 
 
+    public $_argDescriptions = [];
+
     public function __construct(array $config = [])
     {
         foreach ($config as $name => $value) {
@@ -76,18 +78,31 @@ class ObjectInfo
 
     public function getArgs()
     {
+        return $this->_assignArgs($this->args, $this->expandArgs);
+    }
+
+
+    protected function _assignArgs($_args, $expandArgs)
+    {
         $args = [];
-        if (count($this->args) > 0) {
+        if (count($_args) > 0) {
             $args = [];
-            foreach ($this->args as $name => $type) {
-                if( null === ($graphType = YiiType::cast($type))) {
-                    continue;
+            foreach ($_args as $name => $type) {
+                if(is_array($type)) {
+                    if (null === ($graphType = YiiType::cast($type['type']))) {
+                        continue;
+                    }
+                    $this->_argDescriptions[$name] = $type['description'] ?? null;
+                } else {
+                    if (null === ($graphType = YiiType::cast($type))) {
+                        continue;
+                    }
                 }
                 $args[$name] = $graphType;
             }
         }
 
-        foreach ($this->expandArgs as $name => $type) {
+        foreach ($expandArgs as $name => $type) {
             if( null === ($graphType = YiiType::cast($type))) {
                 continue;
             }
@@ -96,5 +111,4 @@ class ObjectInfo
 
         return $args;
     }
-
 }
