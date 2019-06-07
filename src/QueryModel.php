@@ -300,7 +300,7 @@ class QueryModel extends Model
             }
         } elseif(null !== $typeName) {
             $typeName = explode('\\', $typeName);
-            return $this->objectInfoByName(end($typeName));
+            return $this->objectInfoByName(end($typeName))->getType();
         }
 
         return $this->getFieldType($parentModel, $fieldName);
