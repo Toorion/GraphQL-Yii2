@@ -352,27 +352,34 @@ class QueryDoc
     protected function getObjectFieldsDoc($config)
     {
         $className = $config['class'];
-        $fields = $className::objectFields();
 
         $types = [];
-        foreach($fields as $name => $baseType) {
-            if(null === ($type = YiiType::cast($baseType))) {
-                continue;
-            }
 
+        $reflectionClass = new \ReflectionClass($className);
+
+        $properties = $reflectionClass->getProperties(\ReflectionProperty::IS_PUBLIC);
+        foreach ($properties as $property) {
             $types[] = [
-                "name" => $name,
-                "description" => $labels[$name] ?? null,
+                "name" => $property->getName(),
+                "description" => null,
                 "args" => [],
                 "type" => [
                     "kind" => "SCALAR",
-                    "name" => $type->toString(),
+                    "name" => YiiType::cast('string')->toString(),
                     "ofType" => null
                 ],
                 "isDeprecated" => false,
                 "deprecationReason" => null
             ];
+
         }
+
+        // todo
+//        $methods = $reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC );
+//        foreach ($methods as $method) {
+//
+//
+//        }
 
         return $types;
     }
