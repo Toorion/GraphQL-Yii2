@@ -15,7 +15,7 @@ class InfoRegistry
 
     public static function getInfo(array $classConfig, $multiple = false)
     {
-        if(is_a($classConfig['class'], ActiveRecord::class, true)) {
+//        if(is_a($classConfig['class'], ActiveRecord::class, true)) {
             if ($multiple) {
                 if (isset(self::$listRegistry[$classConfig['class']])) {
                     return self::$listRegistry[$classConfig['class']];
@@ -27,15 +27,15 @@ class InfoRegistry
                 return self::$objectRegistry[$classConfig['class']];
             }
             return self::$objectRegistry[$classConfig['class']] = new RecordInfo($classConfig);
-        }
+//        }
 
-        if(is_a($classConfig['class'], ListModel::class, true)) {
-            $className = $classConfig['class'];
-            return self::$objectRegistry[$classConfig['class']] = $className::getObjectInfo($classConfig);
-        } elseif(is_a($classConfig['class'], ObjectModel::class, true)) {
-            $className = $classConfig['class'];
-            return self::$objectRegistry[$classConfig['class']] = $className::getObjectInfo($classConfig);
-        }
+//        if(is_a($classConfig['class'], ListModel::class, true)) {
+//            $className = $classConfig['class'];
+//            return self::$objectRegistry[$classConfig['class']] = $className::getObjectInfo($classConfig);
+//        } elseif(is_a($classConfig['class'], ObjectModel::class, true)) {
+//            $className = $classConfig['class'];
+//            return self::$objectRegistry[$classConfig['class']] = $className::getObjectInfo($classConfig);
+//        }
     }
 
 
