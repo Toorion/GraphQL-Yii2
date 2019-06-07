@@ -299,7 +299,7 @@ class QueryModel extends Model
                 return InfoRegistry::getInfo($this->queryClasses[$tableName], $multiple)->getType();
             }
         } elseif(null !== $typeName) {
-            return $this->objectInfoByName($typeName);
+            return $this->objectInfoByName(basename($typeName));
         }
 
         return $this->getFieldType($parentModel, $fieldName);
