@@ -230,7 +230,7 @@ class QueryModel extends Model
     }
 
 
-    public function objectInfoBykey($key, $multiple) {
+    public function objectInfoByKey($key, $multiple) {
         if(!isset($this->queryClasses[$key])) {
             return null;
 //            throw new \Error(
@@ -247,9 +247,9 @@ class QueryModel extends Model
     {
         $isQuery = false;
         $getter = 'get' . ucfirst($fieldName);
+        $typeName = null;
+        $multiple = false;
         if(method_exists($parentModel, $getter)) {
-
-            $multiple = false;
             $key = $fieldName;
             if ($fieldName == Inflector::singularize($fieldName)) {
                 // hasOne
@@ -270,7 +270,6 @@ class QueryModel extends Model
 
             if (!$isQuery) {
                 $relations = $this->getRelationsOf($parentModel->tableSchema->schemaName, $parentModel->tableSchema->name);
-
                 // Check for relation really exists
                 if (isset($relations[$key])) {
                     $isQuery = true;
@@ -299,6 +298,8 @@ class QueryModel extends Model
             if(isset($this->queryClasses[$tableName])) {
                 return InfoRegistry::getInfo($this->queryClasses[$tableName], $multiple)->getType();
             }
+        } elseif(null !== $typeName) {
+            return $this->objectInfoByName($typeName);
         }
 
         return $this->getFieldType($parentModel, $fieldName);
