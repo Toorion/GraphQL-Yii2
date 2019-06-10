@@ -35,6 +35,7 @@ class YiiType
                 break;
             case "double":
             case "number":
+            case "decimal":
                 $type = Type::float();
                 break;
             case "array":
