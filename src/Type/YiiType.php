@@ -27,8 +27,10 @@ class YiiType
             case "string":
             case "safe":
             case "text":
-            case "json":
                 $type = Type::string();
+                break;
+            case "json":
+                $type = Type::hash();
                 break;
             case "boolean":
                 $type = Type::boolean();
