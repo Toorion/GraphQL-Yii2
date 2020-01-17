@@ -5,10 +5,8 @@ namespace YiiGraphQL\Info;
 
 use yii\db\Query;
 use yii\helpers\StringHelper;
-use YiiGraphQL\Type\Definition\ObjectType;
 use YiiGraphQL\Type\Definition\Type;
 use YiiGraphQL\Type\YiiType;
-use YiiGraphQL\Type\Definition\ListOfType;
 
 class RecordsInfo extends ListInfo
 {
@@ -46,7 +44,9 @@ class RecordsInfo extends ListInfo
             $xPagination = isset($args['x_pagination']) && $args['x_pagination'] === true;
 
             /** @var Query $query */
-            if(null !== $this->searchClass) {
+            if ($this->isStaticModel($this->class)) {
+                return call_user_func($this->class . '::findAll');
+            } else if(null !== $this->searchClass) {
                 $searchModel = new $this->searchClass();
                 $query = $searchModel->search([StringHelper::basename($this->searchClass) => $args])->query;
             } else {
@@ -168,5 +168,34 @@ class RecordsInfo extends ListInfo
             }
         }
         return $args;
+    }
+
+    /**
+     * StaticModel if the class has : 
+     * protected static $names
+     * protected static $fields
+     * @param $className
+     * @return bool
+     * @throws \ReflectionException
+     */
+    protected function isStaticModel($className)
+    {
+        $class = new \ReflectionClass($className);
+        $props = $class->getProperties();
+        $count = 0;
+        foreach ($props as $prop) {
+            switch ($prop->name) {
+                case 'fields':
+                case 'names':
+                    if ($prop->isStatic() && $prop->isProtected()) {
+                        $count++;
+                    }
+                    break;
+            }
+        }
+        if (2 === $count) {
+            return true;
+        }
+        return false;
     }
 }
