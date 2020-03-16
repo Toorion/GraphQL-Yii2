@@ -173,6 +173,7 @@ class QueryDoc
                 $fields = $this->getTableFieldsDoc($row);
             } else {
                 $name = lcfirst(str_replace('_', '', ucwords($key, '_')));
+                $name = str_replace('.', '_', $name);
                 if (null !== ($objectInfo = $this->buildObjectType($key, $name, $name, false,$row['description'] ?? null))) {
                     $queryFields[] = $objectInfo;
                 }
