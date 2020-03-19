@@ -232,7 +232,11 @@ class QueryModel extends Model
 
     public function objectInfoByKey($key, $multiple) {
         if(!isset($this->queryClasses[$key])) {
-            return null;
+            $key = explode('_', $key, 2);
+            $key = $key[0] . '.' . $key[1];
+            if(!isset($this->queryClasses[$key])) {
+                return null;
+            }
 //            throw new \Error(
 //                "Config for $name -> $alias not set"
 //            );
