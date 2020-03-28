@@ -152,6 +152,16 @@ class QueryDoc
                 "interfaces" => null,
                 "enumValues" => null,
                 "possibleTypes" => null
+            ],
+            [
+                "kind" => "SCALAR",
+                "name" => "Array",
+                "description" => "The `Array` dimension type represents multiple rows.",
+                "fields" => null,
+                "inputFields" => null,
+                "interfaces" => null,
+                "enumValues" => null,
+                "possibleTypes" => null
             ]
         ];
         $queryFields = [];
