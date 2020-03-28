@@ -302,7 +302,7 @@ class QueryModel extends Model
             if(isset($this->queryClasses[$tableName])) {
                 return InfoRegistry::getInfo($this->queryClasses[$tableName], $multiple)->getType();
             }
-        } elseif(null !== $typeName) {
+        } elseif(null !== $typeName && 'array' !== $typeName) {
             $typeName = explode('\\', $typeName);
             return $this->objectInfoByName(end($typeName))->getType();
         }
